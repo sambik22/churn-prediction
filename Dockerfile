@@ -3,6 +3,7 @@
 # той самий код + ті самі дані (перевірені SHA-256) = та сама модель.
 FROM python:3.12-slim AS trainer
 WORKDIR /app
+ENV CHURN_ROOT=/app
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt pyproject.toml README.md ./
@@ -13,6 +14,7 @@ RUN pip install --no-cache-dir --no-deps . && python -m churn.train
 # ---- Стадія 2: легкий runtime для API ----------------------------------------
 FROM python:3.12-slim
 WORKDIR /app
+ENV CHURN_ROOT=/app
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home appuser

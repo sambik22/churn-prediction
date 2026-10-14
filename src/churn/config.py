@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+# Корінь проєкту. У Docker пакет встановлено в site-packages, тому там корінь
+# задається явно через CHURN_ROOT; локально (editable install) він обчислюється.
+ROOT = Path(os.getenv("CHURN_ROOT", Path(__file__).resolve().parents[2]))
 DATA_DIR = ROOT / "data"
 RAW_DATA_PATH = DATA_DIR / "raw" / "telco_churn.csv"
 MODELS_DIR = ROOT / "models"
