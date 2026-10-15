@@ -1,8 +1,8 @@
-"""Feature engineering і препроцесинг як частина sklearn-пайплайну.
+"""Feature engineering and preprocessing as part of an sklearn pipeline.
 
-Усе, що робиться з даними, живе всередині ``Pipeline``. Тому одні й ті самі
-перетворення застосовуються під час навчання, крос-валідації та в API, і немає
-витоку інформації з тестової вибірки (data leakage).
+Everything done to the data lives inside a ``Pipeline``. The same transformations
+are therefore applied during training, cross-validation and in the API, and no
+information leaks from the test set (data leakage).
 """
 
 from __future__ import annotations
@@ -40,16 +40,16 @@ ENGINEERED_BINARY = [
 
 
 class ChurnFeatureEngineer(BaseEstimator, TransformerMixin):
-    """Додає ознаки, які напряму відображають гіпотези з EDA.
+    """Add features that directly encode the hypotheses from the EDA.
 
-    * ``num_addon_services`` — скільки додаткових послуг підключено.
-      Більше послуг означає «вищі витрати на перехід» до конкурента.
-    * ``avg_monthly_spend`` — TotalCharges / tenure, середній фактичний платіж.
-    * ``charge_delta`` — різниця між поточним і середнім платежем: чи зростав рахунок.
-    * ``is_month_to_month``, ``is_electronic_check``, ``has_fiber`` — найсильніші
-      сигнали відтоку з EDA у вигляді явних прапорців.
-    * ``no_protection`` — інтернет є, але немає ні OnlineSecurity, ні TechSupport.
-    * ``is_new_customer`` — перші 6 місяців, найризиковіший період.
+    * ``num_addon_services`` — how many add-on services are active.
+      More services means higher "switching costs" to a competitor.
+    * ``avg_monthly_spend`` — TotalCharges / tenure, the average actual payment.
+    * ``charge_delta`` — current minus average payment: has the bill changed?
+    * ``is_month_to_month``, ``is_electronic_check``, ``has_fiber`` — the strongest
+      churn signals from the EDA as explicit flags.
+    * ``no_protection`` — has internet but neither OnlineSecurity nor TechSupport.
+    * ``is_new_customer`` — the first 6 months, the riskiest period.
     """
 
     def fit(self, X: pd.DataFrame, y=None):
@@ -79,10 +79,10 @@ class ChurnFeatureEngineer(BaseEstimator, TransformerMixin):
 
 
 def build_preprocessor(scale_numeric: bool = True) -> ColumnTransformer:
-    """Кодує категорії one-hot і (для лінійних моделей) стандартизує числа.
+    """One-hot encode categories and (for linear models) standardize numbers.
 
-    Деревам масштабування не потрібне, але воно їм і не шкодить, тому
-    для простоти пайплайн однаковий для всіх моделей, крім прапорця ``scale_numeric``.
+    Trees do not need scaling, so ``scale_numeric`` switches it off for them;
+    otherwise the pipeline is identical for every model.
     """
     numeric = config.NUMERIC_FEATURES + ENGINEERED_NUMERIC
     passthrough = config.BINARY_FEATURES + ENGINEERED_BINARY

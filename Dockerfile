@@ -1,6 +1,6 @@
-# ---- Стадія 1: навчання моделі ----------------------------------------------
-# Модель тренується під час збірки образу, тож образ самодостатній і відтворюваний:
-# той самий код + ті самі дані (перевірені SHA-256) = та сама модель.
+# ---- Stage 1: train the model ------------------------------------------------
+# The model is trained while the image builds, so the image is self-contained and
+# reproducible: same code + same data (verified by SHA-256) = same model.
 FROM python:3.12-slim AS trainer
 WORKDIR /app
 ENV CHURN_ROOT=/app
@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src ./src
 RUN pip install --no-cache-dir --no-deps . && python -m churn.train
 
-# ---- Стадія 2: легкий runtime для API ----------------------------------------
+# ---- Stage 2: slim API runtime ----------------------------------------------
 FROM python:3.12-slim
 WORKDIR /app
 ENV CHURN_ROOT=/app

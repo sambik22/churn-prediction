@@ -1,7 +1,7 @@
-"""REST API для прогнозу відтоку.
+"""REST API for churn prediction.
 
-Запуск локально:  uvicorn api.main:app --reload
-Документація:     http://localhost:8000/docs
+Run locally:  uvicorn api.main:app --reload
+Docs:         http://localhost:8000/docs
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ state: dict[str, ChurnModel] = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Модель завантажується один раз при старті, а не на кожен запит.
+    # The model is loaded once at startup, not on every request.
     if MODEL_PATH.exists():
         state["model"] = ChurnModel.load(MODEL_PATH)
     yield
@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Churn Prediction API",
-    description="Прогноз ймовірності відтоку клієнта телеком-оператора з SHAP-поясненнями.",
+    description="Telecom customer churn probability with SHAP explanations.",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -40,7 +40,7 @@ app = FastAPI(
 
 def get_model() -> ChurnModel:
     if "model" not in state:
-        raise HTTPException(503, "Модель не завантажена. Спершу виконайте `make train`.")
+        raise HTTPException(503, "Model is not loaded. Run `make train` first.")
     return state["model"]
 
 
@@ -75,7 +75,7 @@ def model_info() -> ModelInfo:
 @app.post("/predict", response_model=Prediction)
 def predict(
     customer: Customer,
-    explain: bool = Query(True, description="Повернути топ-5 факторів SHAP"),
+    explain: bool = Query(True, description="Return the top-5 SHAP factors"),
 ) -> Prediction:
     return _predict([customer], explain)[0]
 
@@ -83,6 +83,6 @@ def predict(
 @app.post("/predict/batch", response_model=BatchResponse)
 def predict_batch(
     request: BatchRequest,
-    explain: bool = Query(False, description="SHAP для кожного клієнта (повільніше)"),
+    explain: bool = Query(False, description="SHAP for every customer (slower)"),
 ) -> BatchResponse:
     return BatchResponse(predictions=_predict(request.customers, explain))

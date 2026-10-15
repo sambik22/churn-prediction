@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "churn"
 version = "0.1.0"
-description = "End-to-end прогноз відтоку клієнтів телеком-оператора: EDA, моделі, SHAP, FastAPI"
+description = "End-to-end telecom customer churn prediction: EDA, models, SHAP, FastAPI"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

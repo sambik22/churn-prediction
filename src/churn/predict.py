@@ -1,4 +1,4 @@
-"""Завантаження збереженої моделі та прогноз для нових клієнтів."""
+"""Loading the saved model and scoring new customers."""
 
 from __future__ import annotations
 
@@ -50,7 +50,7 @@ class ChurnModel:
 
 
 def risk_level(proba: float, threshold: float) -> str:
-    """high — модель радить діяти (≥ порогу); medium — «список спостереження»."""
+    """high: the model recommends acting (≥ threshold); medium: a watch list."""
     if proba >= threshold:
         return "high"
     if proba >= 0.6 * threshold:

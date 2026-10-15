@@ -1,5 +1,5 @@
-"""Тести не залежать від інтернету: використовують невеликий синтетичний датасет
-у форматі IBM Telco і швидку модель, натреновану прямо у фікстурі."""
+"""Tests do not need the internet: they use a small synthetic dataset in the
+IBM Telco format and a quick model trained right inside the fixture."""
 
 from __future__ import annotations
 

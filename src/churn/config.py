@@ -1,12 +1,12 @@
-"""Усі шляхи та «магічні числа» проєкту в одному місці."""
+"""All project paths and "magic numbers" in one place."""
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
-# Корінь проєкту. У Docker пакет встановлено в site-packages, тому там корінь
-# задається явно через CHURN_ROOT; локально (editable install) він обчислюється.
+# Project root. In Docker the package lives in site-packages, so the root is set
+# explicitly via CHURN_ROOT; locally (editable install) it is derived from this file.
 ROOT = Path(os.getenv("CHURN_ROOT", Path(__file__).resolve().parents[2]))
 DATA_DIR = ROOT / "data"
 RAW_DATA_PATH = DATA_DIR / "raw" / "telco_churn.csv"
@@ -49,10 +49,10 @@ CATEGORICAL_FEATURES = [
 ]
 RAW_FEATURES = NUMERIC_FEATURES + BINARY_FEATURES + CATEGORICAL_FEATURES
 
-# Бізнес-припущення для вибору порогу (див. README, розділ «Поріг»).
-# Утримання: пропонуємо клієнту знижку, що коштує OFFER_COST.
-# Якщо клієнт справді збирався піти і пропозиція спрацювала (ймовірність
-# OFFER_SUCCESS_RATE), ми зберігаємо CUSTOMER_VALUE доходу.
+# Business assumptions used to pick the decision threshold (see README, "Threshold").
+# Retention: we offer the customer a discount that costs OFFER_COST.
+# If the customer really was about to leave and the offer works (probability
+# OFFER_SUCCESS_RATE), we keep CUSTOMER_VALUE of revenue.
 CUSTOMER_VALUE = 500.0
 OFFER_COST = 50.0
 OFFER_SUCCESS_RATE = 0.3
