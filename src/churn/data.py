@@ -1,4 +1,4 @@
-"""Завантаження та очищення сирих даних."""
+"""Loading and cleaning the raw data."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from churn import config
 
 
 def download_data(path: Path = config.RAW_DATA_PATH, force: bool = False) -> Path:
-    """Завантажує датасет IBM Telco Customer Churn і перевіряє контрольну суму."""
+    """Download the IBM Telco Customer Churn dataset and verify its checksum."""
     if path.exists() and not force:
         return path
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -20,7 +20,7 @@ def download_data(path: Path = config.RAW_DATA_PATH, force: bool = False) -> Pat
         content = resp.read()
     digest = hashlib.sha256(content).hexdigest()
     if digest != config.DATA_SHA256:
-        raise ValueError(f"Неочікувана SHA-256 датасету: {digest}")
+        raise ValueError(f"Unexpected dataset SHA-256: {digest}")
     path.write_bytes(content)
     return path
 
@@ -30,11 +30,11 @@ def load_raw(path: Path = config.RAW_DATA_PATH) -> pd.DataFrame:
 
 
 def clean(df: pd.DataFrame) -> pd.DataFrame:
-    """Виправляє відомі проблеми датасету.
+    """Fix the known issues of the dataset.
 
-    * ``TotalCharges`` зберігається як рядок, і в 11 нових клієнтів (tenure = 0)
-      це пробіл. Вони ще не отримали жодного рахунку, тож чесне значення — 0.
-    * Ціль ``Churn`` перетворюємо з "Yes"/"No" на 1/0.
+    * ``TotalCharges`` is stored as a string, and for 11 brand-new customers
+      (tenure = 0) it is a blank. They have not been billed yet, so the honest value is 0.
+    * The ``Churn`` target is converted from "Yes"/"No" to 1/0.
     """
     df = df.copy()
     df["TotalCharges"] = pd.to_numeric(df["TotalCharges"].replace(r"^\s*$", "0", regex=True))
@@ -44,7 +44,7 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_dataset(path: Path = config.RAW_DATA_PATH) -> tuple[pd.DataFrame, pd.Series]:
-    """Повертає (X, y), готові для пайплайну."""
+    """Return (X, y) ready for the pipeline."""
     df = clean(load_raw(path))
     X = df[config.RAW_FEATURES]
     y = df[config.TARGET]

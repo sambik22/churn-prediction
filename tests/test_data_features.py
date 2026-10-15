@@ -26,7 +26,7 @@ def test_feature_engineer_adds_expected_columns(raw_df):
 def test_profit_logic():
     y = np.array([1, 1, 0, 0])
     proba = np.array([0.9, 0.2, 0.8, 0.1])
-    # поріг 0.5: TP=1, FP=1 -> 1*(0.3*500-50) - 1*50 = 50
+    # threshold 0.5: TP=1, FP=1 -> 1*(0.3*500-50) - 1*50 = 50
     assert expected_profit(y, proba, 0.5) == 50.0
     t, p = best_profit_threshold(y, proba)
     assert p >= 50.0

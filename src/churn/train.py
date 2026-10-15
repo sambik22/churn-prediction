@@ -1,11 +1,11 @@
-"""Повний цикл навчання: python -m churn.train
+"""Full training run: python -m churn.train
 
-1. Завантаження й очищення даних.
-2. Стратифікований train/test split (тест не чіпаємо до самого кінця).
-3. Крос-валідація всіх кандидатів на train, вибір найкращого за PR-AUC.
-4. Вибір порогу за очікуваним прибутком на out-of-fold прогнозах train.
-5. Фінальне навчання на всьому train, оцінка на test.
-6. Збереження моделі, метрик і графіків (включно з SHAP).
+1. Load and clean the data.
+2. Stratified train/test split (the test set is not touched until the very end).
+3. Cross-validate all candidates on train, pick the best by PR-AUC.
+4. Pick the threshold that maximizes expected profit on out-of-fold train predictions.
+5. Final fit on the whole train set, evaluation on test.
+6. Save the model, metrics and plots (including SHAP).
 """
 
 from __future__ import annotations
@@ -64,10 +64,10 @@ def main(model_name: str | None = None) -> dict:
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=config.TEST_SIZE, stratify=y, random_state=config.RANDOM_STATE
     )
-    print(f"Train: {len(X_train)} рядків, Test: {len(X_test)} рядків, відтік {y.mean():.1%}")
+    print(f"Train: {len(X_train)} rows, Test: {len(X_test)} rows, churn {y.mean():.1%}")
 
     cv = StratifiedKFold(n_splits=config.CV_FOLDS, shuffle=True, random_state=config.RANDOM_STATE)
-    print("Крос-валідація кандидатів:")
+    print("Cross-validating candidates:")
     cv_results = cross_validate_candidates(X_train, y_train, cv)
 
     if model_name is None:
@@ -75,12 +75,12 @@ def main(model_name: str | None = None) -> dict:
             (n for n in cv_results if n != "baseline"),
             key=lambda n: cv_results[n]["pr_auc_mean"],
         )
-    print(f"Обрана модель: {model_name}")
+    print(f"Selected model: {model_name}")
     pipeline = get_candidates()[model_name]
 
     oof_proba = cross_val_predict(pipeline, X_train, y_train, cv=cv, method="predict_proba")[:, 1]
     threshold, _ = best_profit_threshold(y_train, oof_proba)
-    print(f"Поріг за максимальним прибутком (OOF на train): {threshold:.2f}")
+    print(f"Profit-maximizing threshold (OOF on train): {threshold:.2f}")
 
     pipeline.fit(X_train, y_train)
     test_proba = pipeline.predict_proba(X_test)[:, 1]
@@ -98,8 +98,8 @@ def main(model_name: str | None = None) -> dict:
             "offer_success_rate": config.OFFER_SUCCESS_RATE,
         },
     }
-    print("Тест:", {k: round(v, 4) for k, v in test_metrics.items()})
-    print("Прибуток на тесті:", {k: v for k, v in profit.items() if k != "assumptions"})
+    print("Test:", {k: round(v, 4) for k, v in test_metrics.items()})
+    print("Test profit:", {k: v for k, v in profit.items() if k != "assumptions"})
 
     config.FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     plot_model_comparison(cv_results, config.FIGURES_DIR)
@@ -131,16 +131,16 @@ def main(model_name: str | None = None) -> dict:
     (config.REPORTS_DIR / "metrics.json").write_text(
         json.dumps(report, indent=2, ensure_ascii=False)
     )
-    print(f"Модель збережено: {config.MODEL_PATH}")
+    print(f"Model saved: {config.MODEL_PATH}")
     return report
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Навчання моделі відтоку")
+    parser = argparse.ArgumentParser(description="Train the churn model")
     parser.add_argument(
         "--model",
         choices=list(get_candidates()),
         default=None,
-        help="Примусово обрати модель (за замовчуванням — найкраща за CV PR-AUC)",
+        help="Force a model (default: best by CV PR-AUC)",
     )
     main(parser.parse_args().model)

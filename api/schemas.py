@@ -9,7 +9,7 @@ YesNoNoInternet = Literal["Yes", "No", "No internet service"]
 
 
 class Customer(BaseModel):
-    """Один клієнт у тому ж форматі, що й у датасеті IBM Telco."""
+    """One customer, in the same format as the IBM Telco dataset."""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -41,7 +41,7 @@ class Customer(BaseModel):
     SeniorCitizen: Literal[0, 1]
     Partner: YesNo
     Dependents: YesNo
-    tenure: int = Field(ge=0, le=120, description="Скільки місяців клієнт з компанією")
+    tenure: int = Field(ge=0, le=120, description="Months the customer has been with the company")
     PhoneService: YesNo
     MultipleLines: Literal["Yes", "No", "No phone service"]
     InternetService: Literal["DSL", "Fiber optic", "No"]
@@ -66,7 +66,7 @@ class Customer(BaseModel):
 class Factor(BaseModel):
     feature: str
     value: float
-    impact: float = Field(description="SHAP-внесок у логіт: >0 підвищує ризик відтоку")
+    impact: float = Field(description="SHAP contribution to the logit: >0 increases churn risk")
     direction: str
 
 

@@ -1,4 +1,4 @@
-"""Кандидати-моделі. Кожна — повний пайплайн від сирих ознак до ймовірності."""
+"""Candidate models. Each is a full pipeline from raw features to a probability."""
 
 from __future__ import annotations
 
@@ -24,16 +24,16 @@ def make_pipeline(model, scale_numeric: bool = True) -> Pipeline:
 
 
 def get_candidates() -> dict[str, Pipeline]:
-    """Від найпростішої до найскладнішої.
+    """From the simplest to the most complex.
 
-    * ``baseline`` завжди прогнозує частку класу. Будь-яка модель має бути кращою.
-    * ``logreg`` — сильний інтерпретований бейзлайн.
-    * ``random_forest``, ``xgboost``, ``lightgbm`` — ансамблі дерев, які ловлять
-      нелінійності та взаємодії ознак.
+    * ``baseline`` always predicts the class prior. Every model must beat it.
+    * ``logreg`` — a strong, interpretable baseline.
+    * ``random_forest``, ``xgboost``, ``lightgbm`` — tree ensembles that capture
+      non-linearities and feature interactions.
 
-    ``class_weight="balanced"`` / ``scale_pos_weight`` компенсують дисбаланс класів
-    (≈26.5% відтоку). Гіперпараметри помірно консервативні: датасет малий (7k рядків),
-    тож глибокі дерева швидко перенавчаються.
+    ``class_weight="balanced"`` / ``scale_pos_weight`` compensate for class imbalance
+    (≈26.5% churn). Hyperparameters are moderately conservative: the dataset is small
+    (7k rows), so deep trees overfit quickly.
     """
     pos_weight = 2.77  # ≈ (1 - 0.265) / 0.265
     return {

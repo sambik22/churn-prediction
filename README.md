@@ -1,63 +1,65 @@
-# Прогноз відтоку клієнтів (Customer Churn Prediction)
+# Customer Churn Prediction
 
-End-to-end ML-проєкт: від сирого CSV до REST API в Docker. Модель прогнозує, чи піде клієнт
-телеком-оператора, **пояснює чому** (SHAP) і обирає поріг рішення за **очікуваним прибутком**
-кампанії утримання, а не за звичним 0.5.
+**English** | [Українська](README.uk.md)
+
+An end-to-end ML project, from a raw CSV to a REST API in Docker. The model predicts whether
+a telecom customer will leave, **explains why** (SHAP), and picks the decision threshold by the
+**expected profit** of a retention campaign instead of the default 0.5.
 
 | | |
 |---|---|
-| **Задача** | Бінарна класифікація: піде клієнт (`Churn = 1`) чи ні |
-| **Дані** | [IBM Telco Customer Churn](https://github.com/IBM/telco-customer-churn-on-icp4d), 7 043 клієнти, 19 ознак, 26.5% відтоку |
-| **Моделі** | Dummy → Logistic Regression → Random Forest → XGBoost → LightGBM |
-| **Результат (тест)** | ROC-AUC **0.843**, PR-AUC **0.665**, recall 0.70, precision 0.57 |
-| **Бізнес-ефект (тест)** | **+16 300 $** проти **−14 350 $** при розсилці знижки всім |
-| **Стек** | pandas, scikit-learn, XGBoost, LightGBM, SHAP, FastAPI, Docker, pytest, GitHub Actions |
+| **Task** | Binary classification: will the customer churn (`Churn = 1`) or not |
+| **Data** | [IBM Telco Customer Churn](https://github.com/IBM/telco-customer-churn-on-icp4d), 7,043 customers, 19 features, 26.5% churn |
+| **Models** | Dummy → Logistic Regression → Random Forest → XGBoost → LightGBM |
+| **Result (test)** | ROC-AUC **0.843**, PR-AUC **0.665**, recall 0.70, precision 0.57 |
+| **Business impact (test)** | **+$16,300** vs **−$14,350** when sending the discount to everyone |
+| **Stack** | pandas, scikit-learn, XGBoost, LightGBM, SHAP, FastAPI, Docker, pytest, GitHub Actions |
 
-![Пояснення моделі SHAP](reports/figures/shap_beeswarm.png)
+![SHAP model explanation](reports/figures/shap_beeswarm.png)
 
 ---
 
-## Зміст
+## Contents
 
-1. [Бізнес-задача](#1-бізнес-задача)
-2. [Швидкий старт](#2-швидкий-старт)
-3. [Структура проєкту](#3-структура-проєкту)
-4. [EDA: що ми дізналися з даних](#4-eda-що-ми-дізналися-з-даних)
+1. [Business problem](#1-business-problem)
+2. [Quick start](#2-quick-start)
+3. [Project structure](#3-project-structure)
+4. [EDA: what the data tells us](#4-eda-what-the-data-tells-us)
 5. [Feature engineering](#5-feature-engineering)
-6. [Моделювання та валідація](#6-моделювання-та-валідація)
-7. [Поріг: від ймовірності до рішення](#7-поріг-від-ймовірності-до-рішення)
-8. [Пояснення моделі (SHAP)](#8-пояснення-моделі-shap)
+6. [Modeling and validation](#6-modeling-and-validation)
+7. [Threshold: from probability to decision](#7-threshold-from-probability-to-decision)
+8. [Explaining the model (SHAP)](#8-explaining-the-model-shap)
 9. [REST API](#9-rest-api)
-10. [Docker і CI](#10-docker-і-ci)
-11. [Обмеження та що покращити](#11-обмеження-та-що-покращити)
+10. [Docker and CI](#10-docker-and-ci)
+11. [Limitations and next steps](#11-limitations-and-next-steps)
 
 ---
 
-## 1. Бізнес-задача
+## 1. Business problem
 
-Залучити нового клієнта в телекомі коштує в кілька разів дорожче, ніж утримати наявного.
-Тому оператор хоче **заздалегідь** знаходити клієнтів, які збираються піти, і пропонувати їм
-щось цінне (знижку, кращий тариф, безкоштовну техпідтримку).
+In telecom, acquiring a new customer costs several times more than keeping an existing one.
+So the operator wants to find customers who are about to leave **in advance** and offer them
+something valuable (a discount, a better plan, free tech support).
 
-Модель має відповідати на три питання:
-1. **Кого** варто утримувати? (ймовірність відтоку)
-2. **Чи варто** витрачати на нього бюджет? (поріг, що максимізує прибуток)
-3. **Чому** він ризиковий і що запропонувати? (SHAP-фактори для кожного клієнта)
+The model has to answer three questions:
+1. **Who** should we try to retain? (churn probability)
+2. **Is it worth** spending budget on them? (a threshold that maximizes profit)
+3. **Why** are they at risk, and what should we offer? (SHAP factors for every customer)
 
-## 2. Швидкий старт
+## 2. Quick start
 
 ```bash
 git clone https://github.com/sambik22/churn-prediction.git
 cd churn-prediction
 python -m venv .venv && source .venv/bin/activate
 
-make install     # залежності + пакет churn в editable-режимі
-make train       # завантажує дані, порівнює моделі, зберігає найкращу (~30 с)
-make test        # юніт-тести та тести API
+make install     # dependencies + the churn package in editable mode
+make train       # downloads the data, compares models, saves the best one (~30 s)
+make test        # unit and API tests
 make api         # http://localhost:8000/docs
 ```
 
-Або все в Docker (модель тренується під час збірки):
+Or everything in Docker (the model is trained during the build):
 
 ```bash
 make docker-build && make docker-run
@@ -65,101 +67,102 @@ curl -X POST localhost:8000/predict -H 'content-type: application/json' \
      -d @scripts/example_customer.json
 ```
 
-## 3. Структура проєкту
+## 3. Project structure
 
 ```
 churn-prediction/
 ├── notebooks/
-│   ├── 01_eda.ipynb                         # розвідувальний аналіз з поясненнями
-│   └── 02_modeling_and_explainability.ipynb # моделі, поріг, SHAP
-├── src/churn/                # уся логіка — звичайний Python-пакет
-│   ├── config.py             # шляхи, константи, бізнес-припущення
-│   ├── data.py               # завантаження (з перевіркою SHA-256) та очищення
-│   ├── features.py           # feature engineering як sklearn-трансформер
-│   ├── models.py             # кандидати-моделі як повні пайплайни
-│   ├── evaluate.py           # метрики, прибуток, графіки
-│   ├── explain.py            # SHAP-пояснення
-│   ├── predict.py            # збереження/завантаження моделі
-│   └── train.py              # повний цикл навчання: python -m churn.train
-├── api/                      # FastAPI-сервіс
-├── tests/                    # pytest: дані, ознаки, логіка прибутку, API
+│   ├── 01_eda.ipynb                         # exploratory analysis, explained step by step
+│   ├── 02_modeling_and_explainability.ipynb # models, threshold, SHAP
+│   └── uk/                                  # the same notebooks in Ukrainian
+├── src/churn/                # all logic lives in a regular Python package
+│   ├── config.py             # paths, constants, business assumptions
+│   ├── data.py               # download (with SHA-256 check) and cleaning
+│   ├── features.py           # feature engineering as an sklearn transformer
+│   ├── models.py             # candidate models as full pipelines
+│   ├── evaluate.py           # metrics, profit, plots
+│   ├── explain.py            # SHAP explanations
+│   ├── predict.py            # saving / loading the model
+│   └── train.py              # full training run: python -m churn.train
+├── api/                      # FastAPI service
+├── tests/                    # pytest: data, features, profit logic, API
 ├── reports/
-│   ├── figures/              # усі графіки
-│   └── metrics.json          # метрики останнього запуску
+│   ├── figures/              # all plots
+│   └── metrics.json          # metrics of the latest run
 ├── Dockerfile                # multi-stage: train → slim runtime
 ├── Makefile
-└── .github/workflows/ci.yml  # lint + тести + навчання + smoke-тест Docker
+└── .github/workflows/ci.yml  # lint + tests + training + Docker smoke test
 ```
 
-**Чому код у `src/`, а не в ноутбуках?** Ноутбуки зручні для дослідження, але їх важко
-тестувати, перевикористовувати і рев'юїти. Тому логіка живе в пакеті, а ноутбуки лише
-викликають її та пояснюють результати. Ту саму функцію `ChurnFeatureEngineer` використовують
-навчання, тести та API, тож розбіжностей між «дослідженням» і «продом» немає.
+**Why is the code in `src/` and not in notebooks?** Notebooks are great for exploration but
+hard to test, reuse and review. So the logic lives in a package, and the notebooks only call
+it and explain the results. Training, tests and the API all use the same
+`ChurnFeatureEngineer`, so "research" and "production" cannot drift apart.
 
-## 4. EDA: що ми дізналися з даних
+## 4. EDA: what the data tells us
 
-Повний аналіз: [`notebooks/01_eda.ipynb`](notebooks/01_eda.ipynb).
+Full analysis: [`notebooks/01_eda.ipynb`](notebooks/01_eda.ipynb).
 
-**Якість даних.** `TotalCharges` зберігається як рядок, і 11 значень є пробілами. У всіх цих
-клієнтів `tenure = 0`: вони ще не отримали рахунку, тож правильне значення — 0, а не медіана
-і не видалення рядків.
+**Data quality.** `TotalCharges` is stored as a string, and 11 values are blanks. All of these
+customers have `tenure = 0`: they have not been billed yet, so the right value is 0, not the
+median, and the rows should not be dropped.
 
-**Ключові спостереження** (частка відтоку в групі; середнє 26.5%):
+**Key observations** (churn rate within the group; overall average 26.5%):
 
-| Фактор | Відтік |
+| Factor | Churn |
 |---|---|
-| Договір помісячний / на рік / на 2 роки | **43%** / 11% / 3% |
-| Стаж 0–6 міс. / понад 4 роки | **53%** / 9.5% |
-| Оплата Electronic check / автоплатіж | **45%** / 15–17% |
-| Інтернет Fiber optic / DSL | **42%** / 19% |
-| Немає ні OnlineSecurity, ні TechSupport / є хоча б одна | **49%** / 17% |
-| 0 додаткових послуг / 6 послуг (серед клієнтів з інтернетом) | **52%** / 5% |
+| Contract month-to-month / one year / two years | **43%** / 11% / 3% |
+| Tenure 0–6 months / over 4 years | **53%** / 9.5% |
+| Payment by electronic check / automatic payment | **45%** / 15–17% |
+| Internet: fiber optic / DSL | **42%** / 19% |
+| Neither OnlineSecurity nor TechSupport / at least one of them | **49%** / 17% |
+| 0 add-on services / 6 services (customers with internet) | **52%** / 5% |
 
-Портрет ризикового клієнта: **новий, на помісячному договорі, з оптоволокном за високу ціну,
-без додаткових послуг, платить вручну.**
+The profile of a high-risk customer: **new, on a month-to-month contract, on expensive fiber
+optic, with no add-on services, paying manually.**
 
 ## 5. Feature engineering
 
-Кожна нова ознака — це гіпотеза з EDA, закодована явно
+Every new feature is a hypothesis from the EDA, encoded explicitly
 ([`src/churn/features.py`](src/churn/features.py)):
 
-| Ознака | Формула | Гіпотеза |
+| Feature | Formula | Hypothesis |
 |---|---|---|
-| `num_addon_services` | кількість підключених додаткових послуг | більше послуг означає вищу «ціну переходу» |
-| `avg_monthly_spend` | `TotalCharges / tenure` | середній фактичний платіж |
-| `charge_delta` | `MonthlyCharges − avg_monthly_spend` | зміна рахунку як тригер відтоку |
-| `tenure_years` | `tenure / 12` | зручна шкала |
-| `is_month_to_month` | договір помісячний | нічого не тримає клієнта |
-| `is_electronic_check` | ручна оплата чеком | немає інерції автоплатежу |
-| `has_fiber` | Fiber optic | дорогий тариф / проблеми якості |
-| `no_protection` | інтернет є, але немає ні Security, ні TechSupport | слабкий зв'язок із сервісом |
-| `is_new_customer` | `tenure ≤ 6` | найризиковіший період |
+| `num_addon_services` | number of active add-on services | more services means higher switching costs |
+| `avg_monthly_spend` | `TotalCharges / tenure` | average actual payment |
+| `charge_delta` | `MonthlyCharges − avg_monthly_spend` | a change in the bill triggers churn |
+| `tenure_years` | `tenure / 12` | convenient scale |
+| `is_month_to_month` | month-to-month contract | nothing keeps the customer |
+| `is_electronic_check` | manual payment by check | no autopay inertia |
+| `has_fiber` | fiber optic | expensive plan / quality issues |
+| `no_protection` | has internet, but neither Security nor TechSupport | weak tie to the service |
+| `is_new_customer` | `tenure ≤ 6` | the riskiest period |
 
-Далі `ColumnTransformer`: числа стандартизуються (лише для логістичної регресії),
-категорії кодуються one-hot. **Усе це частина `Pipeline`**, тому трансформери навчаються
-лише на тренувальних даних кожного фолду, і витоку даних немає.
+Then a `ColumnTransformer` standardizes numbers (only for logistic regression) and one-hot
+encodes categories. **All of this is part of the `Pipeline`**, so the transformers are fitted
+only on the training data of each fold, and there is no data leakage.
 
-SHAP згодом підтвердив, що 6 зі сконструйованих ознак увійшли в топ-10 найважливіших.
+SHAP later confirmed that 6 of the engineered features made it into the top 10 most important.
 
-## 6. Моделювання та валідація
+## 6. Modeling and validation
 
 ```
-7043 ──stratified split──► train 80% ──► 5-fold CV: порівняння моделей
-                        │              └─► out-of-fold прогнози: вибір порогу
-                        └► test 20%  ────► одна фінальна оцінка
+7043 ──stratified split──► train 80% ──► 5-fold CV: model comparison
+                        │              └─► out-of-fold predictions: threshold choice
+                        └► test 20%  ────► one final evaluation
 ```
 
-**Метрики.** Accuracy тут вводить в оману: модель «ніхто не піде» має 73.5% accuracy і нульову
-користь. Тому використовуємо:
-* **ROC-AUC** — наскільки добре модель *ранжує* клієнтів за ризиком;
-* **PR-AUC** — якість саме на рідшому класі (головна метрика вибору моделі).
+**Metrics.** Accuracy is misleading here: a model that says "nobody leaves" has 73.5% accuracy
+and zero value. So we use:
+* **ROC-AUC**: how well the model *ranks* customers by risk;
+* **PR-AUC**: quality on the rarer class specifically (the main model selection metric).
 
-**Дисбаланс класів** компенсуємо вагами (`class_weight="balanced"`, `scale_pos_weight`),
-а не оверсемплінгом: це простіше і не створює синтетичних клієнтів.
+**Class imbalance** is handled with weights (`class_weight="balanced"`, `scale_pos_weight`)
+rather than oversampling: it is simpler and does not create synthetic customers.
 
-**Результати 5-fold крос-валідації на train:**
+**5-fold cross-validation results on train:**
 
-| Модель | ROC-AUC | PR-AUC |
+| Model | ROC-AUC | PR-AUC |
 |---|---|---|
 | baseline (dummy) | 0.500 | 0.265 |
 | Logistic Regression | 0.847 ± 0.012 | 0.660 ± 0.016 |
@@ -167,89 +170,91 @@ SHAP згодом підтвердив, що 6 зі сконструйовани
 | **XGBoost** | **0.847 ± 0.010** | **0.664 ± 0.022** |
 | LightGBM | 0.842 ± 0.009 | 0.654 ± 0.022 |
 
-![Порівняння моделей](reports/figures/model_comparison.png)
+![Model comparison](reports/figures/model_comparison.png)
 
-**Чесний висновок:** різниця між логістичною регресією, Random Forest і XGBoost (≈0.003)
-у кілька разів менша за розкид між фолдами (≈0.02). Жоден алгоритм не «переміг». Для
-невеликих табличних даних це нормально: **стелю якості задають дані, а не модель.**
-Обрано XGBoost за найвищим середнім PR-AUC; логістична регресія — рівноцінна і простіша альтернатива
-(`python -m churn.train --model logreg`).
+**The honest conclusion:** the gap between logistic regression, Random Forest and XGBoost
+(≈0.003) is several times smaller than the spread across folds (≈0.02). No algorithm "won".
+That is normal for small tabular datasets: **the data sets the ceiling, not the model.**
+XGBoost was chosen for the highest mean PR-AUC; logistic regression is an equally good and
+simpler alternative (`python -m churn.train --model logreg`).
 
-**Фінальна оцінка на тесті** (дивимось на нього один раз):
+**Final evaluation on test** (looked at exactly once):
 
 | | ROC-AUC | PR-AUC | Precision | Recall | F1 |
 |---|---|---|---|---|---|
-| поріг 0.5 | 0.843 | 0.665 | 0.51 | 0.79 | 0.62 |
-| **поріг 0.61** | 0.843 | 0.665 | **0.57** | **0.70** | **0.63** |
+| threshold 0.5 | 0.843 | 0.665 | 0.51 | 0.79 | 0.62 |
+| **threshold 0.61** | 0.843 | 0.665 | **0.57** | **0.70** | **0.63** |
 
-Тестова ROC-AUC (0.843) збігається з крос-валідацією (0.847), отже модель не перенавчилась.
+Test ROC-AUC (0.843) matches cross-validation (0.847), so the model did not overfit.
 
-![Звіт моделі](reports/figures/model_report.png)
+![Model report](reports/figures/model_report.png)
 
-## 7. Поріг: від ймовірності до рішення
+## 7. Threshold: from probability to decision
 
-Модель видає ймовірність, а бізнесу потрібне рішення «пропонувати знижку чи ні». Поріг 0.5 —
-довільний. Правильний поріг залежить від **вартості помилок**:
+The model outputs a probability, but the business needs a decision: "offer a discount or not".
+A threshold of 0.5 is arbitrary. The right threshold depends on the **cost of errors**:
 
-| Параметр (`config.py`) | Значення |
+| Parameter (`config.py`) | Value |
 |---|---|
-| Цінність утриманого клієнта | 500 $ |
-| Вартість пропозиції | 50 $ |
-| Частка тих, кого пропозиція втримає | 30% |
+| Value of a retained customer | $500 |
+| Cost of the offer | $50 |
+| Share of customers the offer actually retains | 30% |
 
-* **True Positive** (піде, ми запропонували): `0.3 × 500 − 50 = +100 $`
-* **False Positive** (не пішов би, а отримав знижку): `−50 $`
-* **FN / TN:** 0 $
+* **True Positive** (leaving, we made an offer): `0.3 × 500 − 50 = +$100`
+* **False Positive** (would have stayed, got a discount): `−$50`
+* **FN / TN:** $0
 
-Поріг, що максимізує прибуток, обрано на **out-of-fold прогнозах train** (не на тесті!):
+The profit-maximizing threshold is chosen on **out-of-fold train predictions** (not on test!):
 **0.61**.
 
-| Стратегія (тест, 1409 клієнтів) | Прибуток |
+| Strategy (test, 1,409 customers) | Profit |
 |---|---|
-| Пропозиція всім | **−14 350 $** |
-| Нікому | 0 $ |
-| Модель, поріг 0.5 | +15 650 $ |
-| **Модель, поріг 0.61** | **+16 300 $** |
+| Offer to everyone | **−$14,350** |
+| Offer to nobody | $0 |
+| Model, threshold 0.5 | +$15,650 |
+| **Model, threshold 0.61** | **+$16,300** |
 
-![Крива прибутку](reports/figures/profit_curve.png)
+![Profit curve](reports/figures/profit_curve.png)
 
-Розсилка знижки всім збиткова, а модель перетворює ту саму кампанію на прибуткову.
-Змініть припущення в `config.py`, і поріг перерахується автоматично.
+Sending the discount to everyone loses money, while the model turns the same campaign into a
+profitable one. Change the assumptions in `config.py` and the threshold is recomputed
+automatically.
 
-## 8. Пояснення моделі (SHAP)
+## 8. Explaining the model (SHAP)
 
-**SHAP** (SHapley Additive exPlanations) розкладає кожен прогноз на внески ознак:
-`logit(p) = базове значення + Σ внесків`. Додатний внесок підвищує ризик, від'ємний — знижує.
-Сума внесків точно дорівнює прогнозу, тож це не апроксимація.
+**SHAP** (SHapley Additive exPlanations) splits every prediction into feature contributions:
+`logit(p) = base value + Σ contributions`. A positive contribution increases risk, a negative
+one decreases it. The contributions add up exactly to the prediction, so this is not an
+approximation.
 
-**Глобально** (графік на початку README): найважливіші фактори — помісячний договір, малий стаж,
-відсутність захисту, оптоволокно, оплата чеком. Модель «вивчила» те саме, що ми бачили в EDA,
-і це важлива перевірка здорового глузду.
+**Globally** (the plot at the top of this README): the most important factors are a
+month-to-month contract, short tenure, no protection services, fiber optic, and paying by
+check. The model learned the same things we saw in the EDA, which is an important sanity check.
 
-**Локально** для одного клієнта:
+**Locally**, for a single customer:
 
 ![SHAP waterfall](reports/figures/shap_waterfall_example.png)
 
-Саме це API повертає в полі `top_factors`. Менеджер бачить не лише «ризик 91%», а й **чому**,
-і може запропонувати релевантну дію: річний договір замість помісячного, TechSupport у подарунок,
-перехід на автоплатіж.
+This is exactly what the API returns in `top_factors`. A retention manager sees not just
+"91% risk" but **why**, and can make a relevant offer: a one-year contract instead of
+month-to-month, free TechSupport, switching to autopay.
 
 ## 9. REST API
 
 ```bash
-make api   # або: uvicorn api.main:app --reload
+make api   # or: uvicorn api.main:app --reload
 ```
 
-Інтерактивна документація Swagger: http://localhost:8000/docs
+Interactive Swagger docs: http://localhost:8000/docs
 
-| Метод | Шлях | Опис |
+| Method | Path | Description |
 |---|---|---|
-| GET | `/health` | статус сервісу і чи завантажена модель |
-| GET | `/model` | назва моделі, поріг, тестові метрики |
-| POST | `/predict?explain=true` | прогноз для одного клієнта + топ-5 факторів SHAP |
-| POST | `/predict/batch` | до 1000 клієнтів за запит |
+| GET | `/health` | service status and whether the model is loaded |
+| GET | `/model` | model name, threshold, test metrics |
+| POST | `/predict?explain=true` | prediction for one customer + top-5 SHAP factors |
+| POST | `/predict/batch` | up to 1,000 customers per request |
 
-Приклад:
+Example:
 
 ```bash
 curl -X POST localhost:8000/predict -H 'content-type: application/json' \
@@ -263,47 +268,49 @@ curl -X POST localhost:8000/predict -H 'content-type: application/json' \
   "risk_level": "high",
   "threshold": 0.61,
   "top_factors": [
-    {"feature": "tenure", "value": 2.0, "impact": 0.736, "direction": "збільшує ризик"},
-    {"feature": "is_month_to_month", "value": 1.0, "impact": 0.482, "direction": "збільшує ризик"},
-    {"feature": "no_protection", "value": 1.0, "impact": 0.264, "direction": "збільшує ризик"}
+    {"feature": "tenure", "value": 2.0, "impact": 0.736, "direction": "increases risk"},
+    {"feature": "is_month_to_month", "value": 1.0, "impact": 0.482, "direction": "increases risk"},
+    {"feature": "no_protection", "value": 1.0, "impact": 0.264, "direction": "increases risk"}
   ]
 }
 ```
 
-Вхідні дані валідуються Pydantic-схемою: неправильний тип договору чи від'ємний платіж
-повернуть `422` з поясненням, а не тихо зіпсований прогноз.
+Input is validated by a Pydantic schema: an unknown contract type or a negative charge returns
+`422` with an explanation instead of a silently broken prediction.
 
-## 10. Docker і CI
+## 10. Docker and CI
 
-**Dockerfile** має дві стадії:
-1. `trainer` — встановлює залежності, завантажує дані (з перевіркою SHA-256) і тренує модель;
-2. runtime — чистий образ лише з кодом API та готовою моделлю, запускається не від root.
+The **Dockerfile** has two stages:
+1. `trainer` installs dependencies, downloads the data (with a SHA-256 check) and trains the model;
+2. the runtime stage is a clean image with only the API code and the trained model, running as a non-root user.
 
-Образ самодостатній і відтворюваний: той самий код і ті самі дані дають ту саму модель.
+The image is self-contained and reproducible: the same code and the same data give the same model.
 
-**GitHub Actions** на кожен PR: `ruff` (лінтер і форматування) → `pytest` → повне навчання →
-збірка Docker-образу → smoke-тест запиту до контейнера.
+**GitHub Actions** on every PR: `ruff` (lint and formatting) → `pytest` → full training →
+Docker image build → smoke-test request to the container.
 
-Тести не залежать від інтернету: вони генерують синтетичний датасет у форматі IBM Telco
-і тренують маленьку модель прямо у фікстурі.
+The tests do not need the internet: they generate a synthetic dataset in the IBM Telco
+format and train a small model right inside a fixture.
 
-## 11. Обмеження та що покращити
+## 11. Limitations and next steps
 
-* **Калібрування.** Ваги класів «підсилюють» відтік, тому модель завищує ймовірності
-  (див. графік калібрування). Для ранжування й порогу це не заважає, але для чесних
-  відсотків варто додати `CalibratedClassifierCV` (isotonic) поверх найкращої моделі.
-* **Бізнес-припущення** (500 $, 50 $, 30%) вигадані. У реальному проєкті їх беруть з
-  фінансових даних і A/B-тесту кампанії утримання.
-* **Знімок, а не часовий ряд.** Датасет — один зріз без дат. У реальності треба валідувати
-  «в часі» (навчання на минулих місяцях, тест на наступному) і моніторити дрейф даних.
-* **Uplift-моделювання.** Модель знаходить тих, хто *піде*, а бізнесу насправді потрібні ті,
-  кого *можна втримати*. Наступний крок — uplift-модель на даних A/B-тесту.
-* **Дані важливіші за алгоритм.** Усі моделі впираються в ту саму стелю (ROC-AUC ≈ 0.85).
-  Найбільший приріст дадуть нові джерела: звернення в підтримку, використання трафіку, історія тарифів.
-* **Тюнінг гіперпараметрів** (Optuna) свідомо не робився: різниця між моделями вже в межах шуму.
+* **Calibration.** Class weights "boost" churn, so the model overestimates probabilities
+  (see the calibration plot). That does not hurt ranking or threshold selection, but for honest
+  percentages add `CalibratedClassifierCV` (isotonic) on top of the best model.
+* **The business assumptions** ($500, $50, 30%) are made up. In a real project they come from
+  financial data and an A/B test of the retention campaign.
+* **A snapshot, not a time series.** The dataset is a single snapshot without dates. In
+  practice you validate "through time" (train on past months, test on the next one) and
+  monitor data drift.
+* **Uplift modeling.** The model finds who *will leave*, but the business really needs those
+  who *can be retained*. The next step is an uplift model trained on A/B test data.
+* **Data beats algorithms.** All models hit the same ceiling (ROC-AUC ≈ 0.85). The biggest
+  gains would come from new sources: support tickets, traffic usage, plan history.
+* **Hyperparameter tuning** (Optuna) was deliberately skipped: the gap between models is already
+  within the noise.
 
 ---
 
-**Ліцензія даних:** IBM Telco Customer Churn, опублікований IBM у репозиторії
-[telco-customer-churn-on-icp4d](https://github.com/IBM/telco-customer-churn-on-icp4d) під Apache 2.0.
-Датасет не зберігається в репозиторії, а завантажується скриптом.
+**Data license:** IBM Telco Customer Churn, published by IBM in the
+[telco-customer-churn-on-icp4d](https://github.com/IBM/telco-customer-churn-on-icp4d) repository
+under Apache 2.0. The dataset is not stored in this repository; a script downloads it.
